@@ -1,4 +1,4 @@
-
+	
 const Database = require('@replit/database');
 const express = require('express');
 
@@ -20,6 +20,10 @@ const responses = {
 	notFound(res) {
 		res.status(404)
 			.send({ message: `404: Not Found`, code: 0 });
+	},
+	internalServerError(res) {
+		res.status(500)
+			.send({ message: `500 Internal Server Error`, code: 0 });
 	}
 };
 
@@ -28,6 +32,8 @@ const responses = {
 
 
 function createAdditionalSkybotDatabase() {
+	server.use(express.json());
+
 	server.all('/', (req, res) => {
 		responses.notFound(res);
 	});
@@ -35,44 +41,90 @@ function createAdditionalSkybotDatabase() {
 	server.all('/ping', (req, res) => {
 		if (req.method === 'GET') {
 			res.status(202)
-				.send({ message: '202: Accepted + Pong', code: 0 }
-				);
+				.send({ message: '202: Accepted + Pong', code: 0 });
 		} else {
 			responses.methodNotAllowed(res);
 		}
 	});
 
-	server.all('/database', async (req, res) => {
-		if (req.headers.authorization !== process.env.DB_AUTH) responses.unauthorized(res);
+	server.all('/database', (req, res) => {
+		responses.notFound(res);
+	});
 
-		if (req.method === 'GET') {
+	server.all('/database/:key', async (req, res) => {
+		if (req.headers.authorization !== process.env.DB_AUTH) return responses.unauthorized(res);
+
+		
+
+		const { key } = req.params;
+		
+		if (key === 'url') {
 			try {
-				const { key } = req.body;
+				res.status(200)
+					.json({ value: process.env.REPLIT_DB_URL });
+			} catch (error) {
+				console.error(error);
 
+				responses.badRequest(res);
+			}
+		} else if (key === 'list') {
+			try {
+				const list = await db.list();
+				
+				try {
+					res.status(200)
+						.json({ value: list });
+				} catch (error) {
+					console.error(error);
+
+					responses.internalServerError(res);
+				}
+			} catch (error) {
+				console.error(error);
+
+				responses.badRequest(res);
+			}
+		} else if (req.method === 'GET') {
+			try {
 				const value = await db.get(key);
 	
 				try {
 					res.status(200)
-						.send({ value: value });
+						.json({ value: value });
 				} catch (error) {
-					res.status(500)
-						.send({ message: `500 Internal Server Error`, code: 0 });
+					console.error(error);
+
+					responses.internalServerError(res);
 				}
 			} catch (error) {
+				console.error(error);
+
 				responses.badRequest(res);
 			}
 		} else if (req.method === 'POST') {
 			try {
-				const { key, value } = req.body;
-			
+				const { value } = req.body;
+				
 				try {
 					await db.set(key, value);
 	
 					res.status(200)
 						.send({ message: `200 Ok`, code: 0 });
 				} catch (error) {
-					res.status(500)
-						.send({ message: `500 Internal Server Error`, code: 0 });
+					responses.internalServerError(res);
+				}
+			} catch (error) {
+				responses.badRequest(res);
+			}
+		} else if (req.method === 'DELETE') {
+			try {			
+				try {
+					await db.delete(key);
+	
+					res.status(200)
+						.send({ message: `200 Ok`, code: 0 });
+				} catch (error) {
+					responses.internalServerError(res);
 				}
 			} catch (error) {
 				responses.badRequest(res);
