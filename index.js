@@ -31,7 +31,7 @@ const responses = {
 
 
 
-function createAdditionaCluster() {
+function createAdditionalCluster() {
 	server.use(express.json());
 
 	server.all('/', (req, res) => {
