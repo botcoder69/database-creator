@@ -31,7 +31,7 @@ const responses = {
 
 
 
-function createAdditionalSkybotDatabase() {
+function createAdditionaCluster() {
 	server.use(express.json());
 
 	server.all('/', (req, res) => {
@@ -137,4 +137,4 @@ function createAdditionalSkybotDatabase() {
 	});
 }
 
-createAdditionalSkybotDatabase();
+createAdditionalCluster();
